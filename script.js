@@ -1,4 +1,15 @@
-const canvas = document.getElementById("game");
+// Roadside Zombies - script.js (rewritten & cleaned)
+//
+// Fixes:
+// - Corrected broken renderShop innerHTML (syntax error).
+// - Added defensive DOM access to avoid runtime errors if elements missing.
+// - Unified initial player facing and other minor safety checks.
+// - Small improvements: weapon id checks, shop rendering, toast handling.
+
+const el = id => document.getElementById(id);
+
+const canvas = el("game");
+if (!canvas) throw new Error("Missing canvas#game element");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
@@ -10,72 +21,23 @@ const mouse = { x: W / 2, y: H / 2, down: false };
 
 const START = {
   playerX: W / 2,
-  playerY: H - 145
+  playerY: H - 145,
+  facing: -Math.PI / 2
 };
 
-const hut = {
-  x: 40,
-  y: H - 185,
-  w: 275,
-  h: 130
-};
-
+const hut = { x: 40, y: H - 185, w: 275, h: 130 };
 const sellZone = { x: 62, y: H - 163, w: 100, h: 72 };
 const shopZone = { x: 183, y: H - 163, w: 108, h: 72 };
-
 const ROAD = { x: W / 2 - 165, w: 330 };
+
 const MAX_WORLD_Y = 2400;
 const MIN_WORLD_Y = 90;
 
 const weapons = {
-  pistol: {
-    name: "Pistol",
-    damage: 1,
-    fireDelay: 320,
-    pellets: 1,
-    spread: 0.03,
-    bulletSpeed: 900,
-    cost: 0,
-    color: "#e4d9ac",
-    auto: false,
-    range: 800
-  },
-  shotgun: {
-    name: "Shotgun",
-    damage: 1,
-    fireDelay: 620,
-    pellets: 7,
-    spread: 0.42,
-    bulletSpeed: 780,
-    cost: 30,
-    color: "#f7d47a",
-    auto: false,
-    range: 650
-  },
-  rifle: {
-    name: "Rifle",
-    damage: 2,
-    fireDelay: 165,
-    pellets: 1,
-    spread: 0.035,
-    bulletSpeed: 1050,
-    cost: 50,
-    color: "#c5d1dd",
-    auto: false,
-    range: 1050
-  },
-  minigun: {
-    name: "Minigun",
-    damage: 1,
-    fireDelay: 75,
-    pellets: 1,
-    spread: 0.11,
-    bulletSpeed: 950,
-    cost: 150,
-    color: "#f5a95f",
-    auto: true,
-    range: 900
-  }
+  pistol: { name: "Pistol", damage: 1, fireDelay: 320, pellets: 1, spread: 0.03, bulletSpeed: 900, cost: 0, color: "#e4d9ac", auto: false, range: 800 },
+  shotgun: { name: "Shotgun", damage: 1, fireDelay: 620, pellets: 7, spread: 0.42, bulletSpeed: 780, cost: 30, color: "#f7d47a", auto: false, range: 650 },
+  rifle: { name: "Rifle", damage: 2, fireDelay: 165, pellets: 1, spread: 0.035, bulletSpeed: 1050, cost: 50, color: "#c5d1dd", auto: false, range: 1050 },
+  minigun: { name: "Minigun", damage: 1, fireDelay: 75, pellets: 1, spread: 0.11, bulletSpeed: 950, cost: 150, color: "#f5a95f", auto: true, range: 900 }
 };
 
 const lootTypes = [
@@ -84,6 +46,7 @@ const lootTypes = [
   { type: "gold", icon: "🪙", name: "GOLD", value: 10, weight: 15 }
 ];
 
+// Game state
 let game = {
   running: false,
   dead: false,
@@ -93,13 +56,7 @@ let game = {
   selectedWeapon: "pistol",
   ownedWeapons: { pistol: true, shotgun: false, rifle: false, minigun: false },
   inventory: [],
-  player: {
-    x: START.playerX,
-    y: START.playerY,
-    speed: 185,
-    facing: 0,
-    hurtTimer: 0
-  },
+  player: { x: START.playerX, y: START.playerY, speed: 185, facing: START.facing, hurtTimer: 0 },
   zombies: [],
   bullets: [],
   drops: [],
@@ -121,13 +78,7 @@ function resetGame() {
   game.selectedWeapon = "pistol";
   game.ownedWeapons = { pistol: true, shotgun: false, rifle: false, minigun: false };
   game.inventory = [];
-  game.player = {
-    x: START.playerX,
-    y: START.playerY,
-    speed: 185,
-    facing: -Math.PI / 2,
-    hurtTimer: 0
-  };
+  game.player = { x: START.playerX, y: START.playerY, speed: 185, facing: START.facing, hurtTimer: 0 };
   game.zombies = [];
   game.bullets = [];
   game.drops = [];
@@ -139,37 +90,32 @@ function resetGame() {
   game.lastShot = 0;
   game.toastTimer = 0;
 
-  document.getElementById("startScreen").classList.add("hidden");
-  document.getElementById("deathScreen").classList.add("hidden");
+  const ss = el("startScreen"); if (ss) ss.classList.add("hidden");
+  const ds = el("deathScreen"); if (ds) ds.classList.add("hidden");
   showToast("Survive the road.");
   updateUI();
 }
 
-document.getElementById("startBtn").onclick = resetGame;
-document.getElementById("restartBtn").onclick = resetGame;
-document.getElementById("closeShopBtn").onclick = closeShop;
+// Wire up UI buttons defensively
+if (el("startBtn")) el("startBtn").onclick = resetGame;
+if (el("restartBtn")) el("restartBtn").onclick = resetGame;
+if (el("closeShopBtn")) el("closeShopBtn").onclick = closeShop;
 
 window.addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
-
-  if (["w", "a", "s", "d", "e", "1", "2", "3", "4", " "].includes(e.key.toLowerCase())) {
-    e.preventDefault();
-  }
-
-  if (!game.running || game.dead) return;
+  if (["w", "a", "s", "d", "e", "1", "2", "3", "4", " "].includes(e.key.toLowerCase())) e.preventDefault();
 
   if (e.key === "Escape") { closeShop(); return; }
+  if (!game.running || game.dead) return;
 
   if (e.key === "1") selectWeapon("pistol");
   if (e.key === "2") selectWeapon("shotgun");
   if (e.key === "3") selectWeapon("rifle");
   if (e.key === "4") selectWeapon("minigun");
-  if (e.key.toLowerCase() === "e" && document.getElementById("shopMenu").classList.contains("hidden")) interact();
+  if (e.key.toLowerCase() === "e" && el("shopMenu") && el("shopMenu").classList.contains("hidden")) interact();
 });
 
-window.addEventListener("keyup", e => {
-  keys[e.key.toLowerCase()] = false;
-});
+window.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
 
 canvas.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
@@ -177,22 +123,13 @@ canvas.addEventListener("mousemove", e => {
   mouse.y = (e.clientY - rect.top) * H / rect.height;
 });
 
-canvas.addEventListener("mousedown", e => {
-  if (e.button === 0) mouse.down = true;
-});
-canvas.addEventListener("mouseup", e => {
-  if (e.button === 0) mouse.down = false;
-});
-window.addEventListener("blur", () => {
-  mouse.down = false;
-  for (const k in keys) keys[k] = false;
-});
+canvas.addEventListener("mousedown", e => { if (e.button === 0) mouse.down = true; });
+canvas.addEventListener("mouseup", e => { if (e.button === 0) mouse.down = false; });
+window.addEventListener("blur", () => { mouse.down = false; for (const k in keys) keys[k] = false; });
 
 function selectWeapon(id) {
-  if (!game.ownedWeapons[id]) {
-    showToast(`YOU DON'T OWN THE ${weapons[id].name.toUpperCase()}`);
-    return;
-  }
+  if (!weapons[id]) { showToast("INVALID WEAPON"); return; }
+  if (!game.ownedWeapons[id]) { showToast(`YOU DON'T OWN THE ${weapons[id].name.toUpperCase()}`); return; }
   game.selectedWeapon = id;
   updateUI();
 }
@@ -218,25 +155,33 @@ function interact() {
 }
 
 function openShop() {
-  document.getElementById("shopMenu").classList.remove("hidden");
+  const menu = el("shopMenu");
+  if (!menu) return;
+  menu.classList.remove("hidden");
   renderShop();
 }
 
-function closeShop() { document.getElementById("shopMenu").classList.add("hidden"); }
+function closeShop() { const menu = el("shopMenu"); if (menu) menu.classList.add("hidden"); }
 
 function buyItem(id) {
   const prices = { health: 20, shotgun: 30, rifle: 50, minigun: 150 };
   const price = prices[id];
+  if (price == null) return;
   if (game.money < price) { showToast("NOT ENOUGH MONEY"); return; }
+
   if (id === "health") {
     if (game.health >= game.maxHealth) { showToast("YOUR HEALTH IS ALREADY FULL"); return; }
-    game.money -= price; game.health++; showToast("+1 HEART PURCHASED");
+    game.money -= price; game.health = Math.min(game.maxHealth, game.health + 1);
+    showToast("+1 HEART PURCHASED");
   } else {
+    if (!weapons[id]) { showToast("INVALID ITEM"); return; }
     if (game.ownedWeapons[id]) { showToast("YOU ALREADY OWN THIS WEAPON"); return; }
     game.money -= price; game.ownedWeapons[id] = true; game.selectedWeapon = id;
     showToast(`${weapons[id].name.toUpperCase()} PURCHASED`);
   }
-  renderShop(); updateUI();
+
+  renderShop();
+  updateUI();
 }
 
 function renderShop() {
@@ -246,15 +191,31 @@ function renderShop() {
     {id:"rifle",icon:"🎯",name:"RIFLE",price:50,desc:"Powerful and accurate"},
     {id:"minigun",icon:"⚡",name:"MINIGUN",price:150,desc:"Rapid automatic fire"}
   ];
-  const container=document.getElementById("shopItems"); container.innerHTML="";
+
+  const container = el("shopItems");
+  if (!container) return;
+  container.innerHTML = "";
+
   for (const item of items) {
-    const owned=item.id!=="health" && game.ownedWeapons[item.id];
-    const full=item.id==="health" && game.health>=game.maxHealth;
-    const b=document.createElement("button"); b.className="shopItem"; b.disabled=owned||full||game.money<item.price;
-    b.innerHTML=`<span class="shopIcon">${item.icon}</span><span class="shopInfo"><strong>${item.name}</strong><small>${owned?"OWNED":full?"HEALTH FULL":item.desc}</small></span><span class="shopPrice">${owned?"✓":"$"+item.price}</span>`;
-    b.onclick=()=>buyItem(item.id); container.appendChild(b);
+    const owned = item.id !== "health" && !!game.ownedWeapons[item.id];
+    const full = item.id === "health" && game.health >= game.maxHealth;
+    const btn = document.createElement("button");
+    btn.className = "shopItem";
+    btn.disabled = owned || full || game.money < item.price;
+    btn.innerHTML = `
+      <span class="shopIcon">${item.icon}</span>
+      <span class="shopInfo">
+        <strong>${item.name}</strong>
+        <small>${owned ? "OWNED" : full ? "HEALTH FULL" : item.desc}</small>
+      </span>
+      <span class="shopPrice">$${item.price}</span>
+    `;
+    btn.onclick = () => buyItem(item.id);
+    container.appendChild(btn);
   }
-  document.getElementById("shopMoney").textContent=`$${game.money}`;
+
+  const moneyEl = el("shopMoney");
+  if (moneyEl) moneyEl.textContent = `$${game.money}`;
 }
 
 function sellInventory() {
@@ -264,10 +225,9 @@ function sellInventory() {
   }
 
   let earned = 0;
-for (const item of game.inventory) {
-  earned += item.value * item.amount;
-}
-  const count = game.inventory.reduce((total, item) => total + item.amount, 0);
+  for (const item of game.inventory) earned += (item.value || 0) * (item.amount || 1);
+
+  const count = game.inventory.reduce((total, item) => total + (item.amount || 1), 0);
   game.money += earned;
   game.inventory = [];
 
@@ -283,7 +243,6 @@ function buyNextUsefulItem() {
     ["minigun", 150]
   ];
 
-  // Choose the first affordable upgrade in a sensible progression.
   if (game.health < game.maxHealth && game.money >= 20) {
     game.money -= 20;
     game.health = Math.min(game.maxHealth, game.health + 1);
@@ -303,11 +262,8 @@ function buyNextUsefulItem() {
     }
   }
 
-  if (game.money < 20) {
-    showToast("NOT ENOUGH MONEY — BOOT = $1, GOLD = $10");
-  } else {
-    showToast("BUYABLE UPGRADES: HEALTH / NEW GUNS");
-  }
+  if (game.money < 20) showToast("NOT ENOUGH MONEY — BOOT = $1, GOLD = $10");
+  else showToast("BUYABLE UPGRADES: HEALTH / NEW GUNS");
 }
 
 function randomLoot() {
@@ -325,38 +281,24 @@ const MAX_SLOTS = 3;
 const MAX_STACK = 10;
 
 function addLoot(loot) {
-  // Find an existing stack of the same item that isn't full
-  const existing = game.inventory.find(
-    item => item.type === loot.type && item.amount < MAX_STACK
-  );
-
+  if (!loot) return false;
+  // Try to add to an existing stack
+  const existing = game.inventory.find(item => item.type === loot.type && item.amount < MAX_STACK);
   if (existing) {
-    existing.amount++;
-
-    showToast(
-      `${loot.name} ×${existing.amount}`
-    );
-
+    existing.amount = Math.min(MAX_STACK, existing.amount + 1);
+    showToast(`${loot.name} ×${existing.amount}`);
     updateUI();
     return true;
   }
 
-  // No existing stack has room, so create a new slot
+  // Create a new slot if possible
   if (game.inventory.length < MAX_SLOTS) {
-    game.inventory.push({
-      ...loot,
-      amount: 1
-    });
-
-    showToast(
-      `${loot.name} COLLECTED`
-    );
-
+    game.inventory.push({ ...loot, amount: 1 });
+    showToast(`${loot.name} COLLECTED`);
     updateUI();
     return true;
   }
 
-  // All 3 slots are occupied
   showToast("INVENTORY FULL — RETURN TO THE HUT");
   return false;
 }
@@ -364,6 +306,7 @@ function addLoot(loot) {
 function shoot() {
   const now = performance.now();
   const gun = weapons[game.selectedWeapon];
+  if (!gun) return;
 
   if (now - game.lastShot < gun.fireDelay) return;
   game.lastShot = now;
@@ -384,24 +327,18 @@ function shoot() {
     });
   }
 
-  const recoil = gun.name === "Shotgun" ? 2 : 0.5;
+  const recoil = (game.selectedWeapon === "shotgun" || gun.name === "Shotgun") ? 2 : 0.5;
   game.player.x -= Math.cos(angBase) * recoil;
   game.player.y -= Math.sin(angBase) * recoil;
 
   for (let i = 0; i < (gun.name === "Shotgun" ? 5 : 2); i++) {
-    addParticle(
-      game.player.x + Math.cos(angBase) * 20,
-      game.player.y + Math.sin(angBase) * 20,
-      gun.color,
-      0.25
-    );
+    addParticle(game.player.x + Math.cos(angBase) * 20, game.player.y + Math.sin(angBase) * 20, gun.color, 0.25);
   }
 }
 
 function spawnZombie() {
   const fromSide = Math.random() < 0.22;
-  let x;
-  let y;
+  let x, y;
 
   if (fromSide) {
     const side = Math.random() < 0.5 ? -1 : 1;
@@ -412,35 +349,23 @@ function spawnZombie() {
     y = Math.max(MIN_WORLD_Y, game.player.y - (300 + Math.random() * 750));
   }
 
-  // Keep zombies away from the safe hut.
   if (y > hut.y - 40) y = hut.y - 50 - Math.random() * 250;
 
   const hp = 2 + Math.floor(game.elapsed / 35);
   const speed = 44 + Math.random() * 19 + Math.min(game.elapsed * 0.15, 24);
 
   game.zombies.push({
-    x,
-    y,
-    hp,
-    maxHp: hp,
-    speed,
-    radius: 15,
-    hitFlash: 0,
-    attackCooldown: 0,
-    wobble: Math.random() * Math.PI * 2
+    x, y, hp, maxHp: hp, speed, radius: 15, hitFlash: 0, attackCooldown: 0, wobble: Math.random() * Math.PI * 2
   });
 }
 
 function hurtPlayer(amount) {
   if (game.player.hurtTimer > 0 || game.dead) return;
-
   game.player.hurtTimer = 0.8;
   game.health -= amount;
   addParticle(game.player.x, game.player.y, "#ff4f4f", 0.45, 15);
 
-  if (game.health <= 0) {
-    die();
-  }
+  if (game.health <= 0) die();
   updateUI();
 }
 
@@ -449,15 +374,13 @@ function die() {
   game.running = false;
   mouse.down = false;
 
-  document.getElementById("deathStats").textContent =
-    `You survived ${Math.floor(game.elapsed)} seconds and killed ${game.kills} zombies.`;
-
-  document.getElementById("deathScreen").classList.remove("hidden");
+  const ds = el("deathStats");
+  if (ds) ds.textContent = `You survived ${Math.floor(game.elapsed)} seconds and killed ${game.kills} zombies.`;
+  const screen = el("deathScreen"); if (screen) screen.classList.remove("hidden");
 }
 
 function update(dt) {
   if (!game.running || game.dead) return;
-
   game.elapsed += dt;
   game.player.hurtTimer = Math.max(0, game.player.hurtTimer - dt);
 
@@ -467,24 +390,19 @@ function update(dt) {
 
   if (dx || dy) {
     const len = Math.hypot(dx, dy) || 1;
-    dx /= len;
-    dy /= len;
-
+    dx /= len; dy /= len;
     const moveSpeed = game.player.speed * speedBoost;
     game.player.x += dx * moveSpeed * dt;
     game.player.y += dy * moveSpeed * dt;
   }
 
-  // World boundaries.
   game.player.x = Math.max(18, Math.min(W - 18, game.player.x));
   game.player.y = Math.max(MIN_WORLD_Y, Math.min(MAX_WORLD_Y, game.player.y));
 
-  // Aim.
   game.player.facing = Math.atan2(mouse.y - game.player.y, mouse.x - game.player.x);
 
   if (mouse.down) shoot();
 
-  // Spawn scaling.
   game.spawnTimer -= dt;
   game.spawnRate = Math.max(0.42, 1.35 - game.elapsed * 0.0055);
   if (game.spawnTimer <= 0) {
@@ -493,19 +411,19 @@ function update(dt) {
     game.spawnTimer = game.spawnRate;
   }
 
-  // Bullets.
+  // Bullets processing
   for (let i = game.bullets.length - 1; i >= 0; i--) {
     const b = game.bullets[i];
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.life -= dt;
 
-    let hit = false;
     if (b.life <= 0 || b.x < -20 || b.x > W + 20 || b.y < -30 || b.y > H + 30) {
       game.bullets.splice(i, 1);
       continue;
     }
 
+    let hit = false;
     for (let j = game.zombies.length - 1; j >= 0; j--) {
       const z = game.zombies[j];
       if (Math.hypot(b.x - z.x, b.y - z.y) < z.radius + 3) {
@@ -517,18 +435,8 @@ function update(dt) {
         if (z.hp <= 0) {
           game.kills++;
           const loot = randomLoot();
-          game.drops.push({
-            x: z.x,
-            y: z.y,
-            item: loot,
-            bob: Math.random() * 6.28,
-            pulse: 0
-          });
-
-          for (let p = 0; p < 8; p++) {
-            addParticle(z.x, z.y, "#a33", 0.5, 10);
-          }
-
+          game.drops.push({ x: z.x, y: z.y, item: loot, bob: Math.random() * 6.28, pulse: 0 });
+          for (let p = 0; p < 8; p++) addParticle(z.x, z.y, "#a33", 0.5, 10);
           game.zombies.splice(j, 1);
         }
         break;
@@ -538,7 +446,7 @@ function update(dt) {
     if (hit) game.bullets.splice(i, 1);
   }
 
-  // Zombies chase, but can never enter the hut.
+  // Zombies AI
   for (let i = game.zombies.length - 1; i >= 0; i--) {
     const z = game.zombies[i];
     z.hitFlash = Math.max(0, z.hitFlash - dt);
@@ -552,43 +460,33 @@ function update(dt) {
     let zx = vx / dist;
     let zy = vy / dist;
 
-    // Safe hut collision for zombies.
-    const targetInHut = inHut() || isInsideZone(game.player, hut, 0);
-
     if (z.y > hut.y - 22 && z.x > hut.x - 20 && z.x < hut.x + hut.w + 20) {
-      // Push zombies away from the hut.
-      if (z.x < hut.x + hut.w / 2) zx = -1;
-      else zx = 1;
+      zx = z.x < hut.x + hut.w / 2 ? -1 : 1;
       zy *= 0.2;
     }
 
     z.x += zx * z.speed * dt;
     z.y += zy * z.speed * dt;
 
-    // Attack only outside the safe hut.
     if (!inHut() && dist < z.radius + 13 && z.attackCooldown <= 0) {
       hurtPlayer(1);
       z.attackCooldown = 0.7;
     }
 
-    // Keep zombies away from interior.
     if (z.x > hut.x && z.x < hut.x + hut.w && z.y > hut.y && z.y < hut.y + hut.h) {
       const pushLeft = Math.abs(z.x - hut.x);
       const pushRight = Math.abs(z.x - (hut.x + hut.w));
       z.x = pushLeft < pushRight ? hut.x - 18 : hut.x + hut.w + 18;
     }
 
-    if (z.x < -60 || z.x > W + 60 || z.y < -80 || z.y > MAX_WORLD_Y + 100) {
-      game.zombies.splice(i, 1);
-    }
+    if (z.x < -60 || z.x > W + 60 || z.y < -80 || z.y > MAX_WORLD_Y + 100) game.zombies.splice(i, 1);
   }
 
-  // Loot pickup.
+  // Drops pickup
   for (let i = game.drops.length - 1; i >= 0; i--) {
     const d = game.drops[i];
     d.bob += dt * 3;
     d.pulse += dt;
-
     if (Math.hypot(game.player.x - d.x, game.player.y - d.y) < 25) {
       if (addLoot(d.item)) game.drops.splice(i, 1);
     }
@@ -604,9 +502,7 @@ function addParticle(x, y, color, life = 0.35, speed = 12) {
     x, y,
     vx: Math.cos(a) * speed * (0.5 + Math.random()),
     vy: Math.sin(a) * speed * (0.5 + Math.random()),
-    color,
-    life,
-    maxLife: life,
+    color, life, maxLife: life,
     size: 2 + Math.random() * 3
   });
 }
@@ -617,15 +513,13 @@ function updateParticles(dt) {
     p.life -= dt;
     p.x += p.vx * dt;
     p.y += p.vy * dt;
-    p.vx *= 0.97;
-    p.vy *= 0.97;
+    p.vx *= 0.97; p.vy *= 0.97;
     if (p.life <= 0) game.particles.splice(i, 1);
   }
 }
 
 function draw() {
   ctx.clearRect(0, 0, W, H);
-
   drawWorld();
   drawRoadside();
   drawHut();
@@ -636,14 +530,13 @@ function draw() {
   drawParticles();
   drawCrosshair();
 
-  // Vignette.
+  // Vignette
   const g = ctx.createRadialGradient(W/2, H/2, 150, W/2, H/2, 600);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(1, "rgba(0,0,0,.38)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
-  // Danger flash when hurt.
   if (game.player.hurtTimer > 0) {
     ctx.fillStyle = `rgba(255,0,0,${game.player.hurtTimer * 0.15})`;
     ctx.fillRect(0, 0, W, H);
@@ -654,7 +547,6 @@ function drawWorld() {
   ctx.fillStyle = "#4c5a3d";
   ctx.fillRect(0, 0, W, H);
 
-  // Grass patches / pixel noise.
   for (let y = 0; y < H; y += 26) {
     for (let x = 0; x < W; x += 26) {
       const seed = Math.sin((x * 12.9898 + y * 78.233) * 0.013) * 43758.5453;
@@ -666,22 +558,15 @@ function drawWorld() {
     }
   }
 
-  // Road.
   ctx.fillStyle = "#4a4a4a";
   ctx.fillRect(ROAD.x, 0, ROAD.w, H);
-
-  // Road edges.
   ctx.fillStyle = "#2b2b2b";
   ctx.fillRect(ROAD.x, 0, 8, H);
   ctx.fillRect(ROAD.x + ROAD.w - 8, 0, 8, H);
 
-  // Center dashed road line.
   ctx.fillStyle = "#b9a85d";
-  for (let y = -30; y < H; y += 58) {
-    ctx.fillRect(W / 2 - 3, y, 6, 30);
-  }
+  for (let y = -30; y < H; y += 58) ctx.fillRect(W / 2 - 3, y, 6, 30);
 
-  // Distant road markers.
   ctx.fillStyle = "#8d8d8d";
   for (let y = 12; y < H; y += 80) {
     ctx.fillRect(ROAD.x - 20, y, 8, 18);
@@ -690,7 +575,6 @@ function drawWorld() {
 }
 
 function drawRoadside() {
-  // Crates, signs, rocks.
   const objs = [
     {x: 340, y: 140, t: "rock"},
     {x: 820, y: 160, t: "rock"},
@@ -702,302 +586,161 @@ function drawRoadside() {
 
   for (const o of objs) {
     if (o.t === "rock") {
-      ctx.fillStyle = "#5d625d";
-      ctx.fillRect(o.x - 9, o.y - 6, 18, 12);
-      ctx.fillStyle = "#737a72";
-      ctx.fillRect(o.x - 4, o.y - 9, 8, 4);
+      ctx.fillStyle = "#5d625d"; ctx.fillRect(o.x - 9, o.y - 6, 18, 12);
+      ctx.fillStyle = "#737a72"; ctx.fillRect(o.x - 4, o.y - 9, 8, 4);
     } else if (o.t === "tree") {
-      ctx.fillStyle = "#40362b";
-      ctx.fillRect(o.x - 6, o.y, 12, 28);
-      ctx.fillStyle = "#243922";
-      ctx.fillRect(o.x - 20, o.y - 16, 40, 30);
-      ctx.fillStyle = "#314a29";
-      ctx.fillRect(o.x - 26, o.y - 6, 52, 20);
+      ctx.fillStyle = "#40362b"; ctx.fillRect(o.x - 6, o.y, 12, 28);
+      ctx.fillStyle = "#243922"; ctx.fillRect(o.x - 20, o.y - 16, 40, 30);
+      ctx.fillStyle = "#314a29"; ctx.fillRect(o.x - 26, o.y - 6, 52, 20);
     } else {
-      ctx.fillStyle = "#705438";
-      ctx.fillRect(o.x - 18, o.y - 14, 36, 28);
-      ctx.strokeStyle = "#312517";
-      ctx.lineWidth = 3;
-      ctx.strokeRect(o.x - 18, o.y - 14, 36, 28);
-      ctx.beginPath();
-      ctx.moveTo(o.x - 14, o.y - 10);
-      ctx.lineTo(o.x + 14, o.y + 10);
-      ctx.moveTo(o.x + 14, o.y - 10);
-      ctx.lineTo(o.x - 14, o.y + 10);
-      ctx.stroke();
+      ctx.fillStyle = "#705438"; ctx.fillRect(o.x - 18, o.y - 14, 36, 28);
+      ctx.strokeStyle = "#312517"; ctx.lineWidth = 3; ctx.strokeRect(o.x - 18, o.y - 14, 36, 28);
+      ctx.beginPath(); ctx.moveTo(o.x - 14, o.y - 10); ctx.lineTo(o.x + 14, o.y + 10);
+      ctx.moveTo(o.x + 14, o.y - 10); ctx.lineTo(o.x - 14, o.y + 10); ctx.stroke();
     }
   }
 }
 
 function drawHut() {
-  // Hut shadow.
-  ctx.fillStyle = "rgba(0,0,0,.3)";
-  ctx.fillRect(hut.x + 8, hut.y + 8, hut.w, hut.h);
+  ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(hut.x + 8, hut.y + 8, hut.w, hut.h);
+  ctx.fillStyle = "#7d5a3d"; ctx.fillRect(hut.x, hut.y, hut.w, hut.h);
 
-  // Walls.
-  ctx.fillStyle = "#7d5a3d";
-  ctx.fillRect(hut.x, hut.y, hut.w, hut.h);
+  ctx.strokeStyle = "#4f3726"; ctx.lineWidth = 2;
+  for (let x = hut.x + 10; x < hut.x + hut.w; x += 22) { ctx.beginPath(); ctx.moveTo(x, hut.y); ctx.lineTo(x, hut.y + hut.h); ctx.stroke(); }
 
-  // Planks.
-  ctx.strokeStyle = "#4f3726";
-  ctx.lineWidth = 2;
-  for (let x = hut.x + 10; x < hut.x + hut.w; x += 22) {
-    ctx.beginPath();
-    ctx.moveTo(x, hut.y);
-    ctx.lineTo(x, hut.y + hut.h);
-    ctx.stroke();
-  }
+  ctx.fillStyle = "#352a26"; ctx.beginPath();
+  ctx.moveTo(hut.x - 18, hut.y + 8); ctx.lineTo(hut.x + 24, hut.y - 30);
+  ctx.lineTo(hut.x + hut.w - 24, hut.y - 30); ctx.lineTo(hut.x + hut.w + 18, hut.y + 8);
+  ctx.closePath(); ctx.fill();
 
-  // Roof.
-  ctx.fillStyle = "#352a26";
-  ctx.beginPath();
-  ctx.moveTo(hut.x - 18, hut.y + 8);
-  ctx.lineTo(hut.x + 24, hut.y - 30);
-  ctx.lineTo(hut.x + hut.w - 24, hut.y - 30);
-  ctx.lineTo(hut.x + hut.w + 18, hut.y + 8);
-  ctx.closePath();
-  ctx.fill();
+  ctx.fillStyle = "#2a221e"; ctx.fillRect(hut.x + hut.w / 2 - 18, hut.y + 50, 36, 80);
+  ctx.fillStyle = "#92734d"; ctx.fillRect(hut.x + hut.w / 2 + 10, hut.y + 88, 5, 5);
 
-  // Door.
-  ctx.fillStyle = "#2a221e";
-  ctx.fillRect(hut.x + hut.w / 2 - 18, hut.y + 50, 36, 80);
-  ctx.fillStyle = "#92734d";
-  ctx.fillRect(hut.x + hut.w / 2 + 10, hut.y + 88, 5, 5);
+  ctx.strokeStyle = "#f2d279"; ctx.lineWidth = 3; ctx.strokeRect(hut.x + 3, hut.y + 3, hut.w - 6, hut.h - 6);
 
-  // Safe interior border.
-  ctx.strokeStyle = "#f2d279";
-  ctx.lineWidth = 3;
-  ctx.strokeRect(hut.x + 3, hut.y + 3, hut.w - 6, hut.h - 6);
-
-  // Sell station.
-  ctx.fillStyle = "#275c34";
-  ctx.fillRect(sellZone.x, sellZone.y, sellZone.w, sellZone.h);
-  ctx.fillStyle = "#d8f1d5";
-  ctx.font = "bold 12px Courier New";
-  ctx.textAlign = "center";
+  ctx.fillStyle = "#275c34"; ctx.fillRect(sellZone.x, sellZone.y, sellZone.w, sellZone.h);
+  ctx.fillStyle = "#d8f1d5"; ctx.font = "bold 12px Courier New"; ctx.textAlign = "center";
   ctx.fillText("SELL", sellZone.x + sellZone.w/2, sellZone.y + 27);
-  ctx.font = "10px Courier New";
-  ctx.fillText("E", sellZone.x + sellZone.w/2, sellZone.y + 44);
+  ctx.font = "10px Courier New"; ctx.fillText("E", sellZone.x + sellZone.w/2, sellZone.y + 44);
 
-  // Buy station.
-  ctx.fillStyle = "#3f4f72";
-  ctx.fillRect(shopZone.x, shopZone.y, shopZone.w, shopZone.h);
-  ctx.fillStyle = "#dbe4ff";
-  ctx.font = "bold 12px Courier New";
-  ctx.fillText("BUY", shopZone.x + shopZone.w/2, shopZone.y + 27);
-  ctx.font = "10px Courier New";
-  ctx.fillText("E", shopZone.x + shopZone.w/2, shopZone.y + 44);
+  ctx.fillStyle = "#3f4f72"; ctx.fillRect(shopZone.x, shopZone.y, shopZone.w, shopZone.h);
+  ctx.fillStyle = "#dbe4ff"; ctx.font = "bold 12px Courier New"; ctx.fillText("BUY", shopZone.x + shopZone.w/2, shopZone.y + 27);
+  ctx.font = "10px Courier New"; ctx.fillText("E", shopZone.x + shopZone.w/2, shopZone.y + 44);
 
-  // Labels.
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 11px Courier New";
-  ctx.fillText("SAFE HUT", hut.x + hut.w/2, hut.y - 10);
+  ctx.fillStyle = "#fff"; ctx.font = "bold 11px Courier New"; ctx.fillText("SAFE HUT", hut.x + hut.w/2, hut.y - 10);
   ctx.textAlign = "left";
 }
 
 function drawDrops() {
   for (const d of game.drops) {
     const bob = Math.sin(d.bob) * 3;
-    ctx.save();
-    ctx.translate(d.x, d.y + bob);
-
+    ctx.save(); ctx.translate(d.x, d.y + bob);
     const glow = 7 + Math.sin(d.pulse * 5) * 2;
-    ctx.fillStyle = d.item.type === "gold"
-      ? `rgba(255,215,50,.28)`
-      : `rgba(255,255,255,.08)`;
-    ctx.beginPath();
-    ctx.arc(0, 0, glow, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = d.item.type === "gold" ? `rgba(255,215,50,.28)` : `rgba(255,255,255,.08)`;
+    ctx.beginPath(); ctx.arc(0, 0, glow, 0, Math.PI * 2); ctx.fill();
 
-    ctx.font = "22px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(d.item.icon, 0, 8);
-
-    ctx.font = "9px Courier New";
-    ctx.fillStyle = "#fff";
-    ctx.fillText(d.item.name, 0, 22);
+    ctx.font = "22px Arial"; ctx.textAlign = "center"; ctx.fillText(d.item.icon, 0, 8);
+    ctx.font = "9px Courier New"; ctx.fillStyle = "#fff"; ctx.fillText(d.item.name, 0, 22);
     ctx.restore();
   }
 }
 
 function drawZombies() {
   for (const z of game.zombies) {
-    ctx.save();
-    ctx.translate(z.x, z.y);
-
+    ctx.save(); ctx.translate(z.x, z.y);
     const wiggle = Math.sin(z.wobble) * 2;
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fillRect(-13, 10, 26, 7);
+    ctx.fillStyle = "#293226"; ctx.fillRect(-10, 8 + wiggle, 7, 12); ctx.fillRect(3, 8 - wiggle, 7, 12);
+    ctx.fillStyle = z.hitFlash > 0 ? "#f2b1a5" : "#57704e"; ctx.fillRect(-12, -6, 24, 18);
+    ctx.fillStyle = z.hitFlash > 0 ? "#ffd0be" : "#7d936e"; ctx.fillRect(-10, -19, 20, 17);
+    ctx.fillStyle = "#293026"; ctx.fillRect(-11, -22, 22, 5);
+    ctx.fillStyle = "#d93636"; ctx.fillRect(-6, -15, 3, 3); ctx.fillRect(4, -15, 3, 3);
+    ctx.strokeStyle = "#6f8660"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-12, -1); ctx.lineTo(-21, 7 + wiggle); ctx.moveTo(12, -1); ctx.lineTo(21, 7 - wiggle); ctx.stroke();
 
-    // Shadow.
-    ctx.fillStyle = "rgba(0,0,0,.35)";
-    ctx.fillRect(-13, 10, 26, 7);
-
-    // Legs.
-    ctx.fillStyle = "#293226";
-    ctx.fillRect(-10, 8 + wiggle, 7, 12);
-    ctx.fillRect(3, 8 - wiggle, 7, 12);
-
-    // Body.
-    ctx.fillStyle = z.hitFlash > 0 ? "#f2b1a5" : "#57704e";
-    ctx.fillRect(-12, -6, 24, 18);
-
-    // Head.
-    ctx.fillStyle = z.hitFlash > 0 ? "#ffd0be" : "#7d936e";
-    ctx.fillRect(-10, -19, 20, 17);
-
-    // Hair / eyes.
-    ctx.fillStyle = "#293026";
-    ctx.fillRect(-11, -22, 22, 5);
-    ctx.fillStyle = "#d93636";
-    ctx.fillRect(-6, -15, 3, 3);
-    ctx.fillRect(4, -15, 3, 3);
-
-    // Arms.
-    ctx.strokeStyle = "#6f8660";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-12, -1);
-    ctx.lineTo(-21, 7 + wiggle);
-    ctx.moveTo(12, -1);
-    ctx.lineTo(21, 7 - wiggle);
-    ctx.stroke();
-
-    // Health bar.
-    const bw = 30;
-    ctx.fillStyle = "#1a1a1a";
-    ctx.fillRect(-bw/2, -29, bw, 4);
-    ctx.fillStyle = "#d55";
-    ctx.fillRect(-bw/2, -29, bw * (z.hp / z.maxHp), 4);
-
+    const bw = 30; ctx.fillStyle = "#1a1a1a"; ctx.fillRect(-bw/2, -29, bw, 4);
+    ctx.fillStyle = "#d55"; ctx.fillRect(-bw/2, -29, bw * (z.hp / z.maxHp), 4);
     ctx.restore();
   }
 }
 
 function drawBullets() {
-  for (const b of game.bullets) {
-    ctx.fillStyle = b.color;
-    ctx.fillRect(b.x - 2, b.y - 2, 4, 4);
-  }
+  for (const b of game.bullets) { ctx.fillStyle = b.color; ctx.fillRect(b.x - 2, b.y - 2, 4, 4); }
 }
 
 function drawPlayer() {
   const p = game.player;
-  ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(p.facing);
-
-  // Shadow.
-  ctx.fillStyle = "rgba(0,0,0,.4)";
-  ctx.fillRect(-11, 10, 23, 7);
-
-  // Body.
-  ctx.fillStyle = "#2d5b8a";
-  ctx.fillRect(-11, -2, 22, 18);
-
-  // Head.
-  ctx.fillStyle = "#d9a77a";
-  ctx.fillRect(-9, -17, 18, 16);
-
-  // Hair.
-  ctx.fillStyle = "#2b211d";
-  ctx.fillRect(-10, -20, 20, 6);
-
-  // Weapon arm.
-  ctx.fillStyle = "#d9a77a";
-  ctx.fillRect(1, -1, 18, 6);
-
-  // Gun.
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.facing);
+  ctx.fillStyle = "rgba(0,0,0,.4)"; ctx.fillRect(-11, 10, 23, 7);
+  ctx.fillStyle = "#2d5b8a"; ctx.fillRect(-11, -2, 22, 18);
+  ctx.fillStyle = "#d9a77a"; ctx.fillRect(-9, -17, 18, 16);
+  ctx.fillStyle = "#2b211d"; ctx.fillRect(-10, -20, 20, 6);
+  ctx.fillStyle = "#d9a77a"; ctx.fillRect(1, -1, 18, 6);
   ctx.fillStyle = "#222";
   if (game.selectedWeapon === "minigun") {
-    ctx.fillRect(8, -6, 22, 8);
-    ctx.fillRect(20, -9, 13, 4);
-    ctx.fillRect(20, 3, 13, 4);
-  } else if (game.selectedWeapon === "shotgun") {
-    ctx.fillRect(8, -4, 26, 6);
-  } else if (game.selectedWeapon === "rifle") {
-    ctx.fillRect(8, -4, 34, 4);
-  } else {
-    ctx.fillRect(8, -3, 17, 5);
-  }
-
+    ctx.fillRect(8, -6, 22, 8); ctx.fillRect(20, -9, 13, 4); ctx.fillRect(20, 3, 13, 4);
+  } else if (game.selectedWeapon === "shotgun") ctx.fillRect(8, -4, 26, 6);
+  else if (game.selectedWeapon === "rifle") ctx.fillRect(8, -4, 34, 4);
+  else ctx.fillRect(8, -3, 17, 5);
   ctx.restore();
 }
 
 function drawParticles() {
   for (const p of game.particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.size, p.size);
+    ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size);
   }
   ctx.globalAlpha = 1;
 }
 
 function drawCrosshair() {
-  ctx.strokeStyle = "rgba(255,255,255,.8)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(mouse.x - 7, mouse.y);
-  ctx.lineTo(mouse.x - 2, mouse.y);
-  ctx.moveTo(mouse.x + 2, mouse.y);
-  ctx.lineTo(mouse.x + 7, mouse.y);
-  ctx.moveTo(mouse.x, mouse.y - 7);
-  ctx.lineTo(mouse.x, mouse.y - 2);
-  ctx.moveTo(mouse.x, mouse.y + 2);
-  ctx.lineTo(mouse.x, mouse.y + 7);
+  ctx.strokeStyle = "rgba(255,255,255,.8)"; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(mouse.x - 7, mouse.y); ctx.lineTo(mouse.x - 2, mouse.y);
+  ctx.moveTo(mouse.x + 2, mouse.y); ctx.lineTo(mouse.x + 7, mouse.y);
+  ctx.moveTo(mouse.x, mouse.y - 7); ctx.lineTo(mouse.x, mouse.y - 2);
+  ctx.moveTo(mouse.x, mouse.y + 2); ctx.lineTo(mouse.x, mouse.y + 7);
   ctx.stroke();
 }
 
 function updateUI() {
   const hearts = "♥".repeat(Math.max(0, game.health)) + "♡".repeat(Math.max(0, game.maxHealth - game.health));
-  document.getElementById("hearts").textContent = hearts;
-  document.getElementById("money").textContent = `$${game.money}`;
-  document.getElementById("weaponName").textContent = weapons[game.selectedWeapon].name.toUpperCase();
-  document.getElementById("zombieCount").textContent = game.zombies.length;
+  if (el("hearts")) el("hearts").textContent = hearts;
+  if (el("money")) el("money").textContent = `$${game.money}`;
+  if (el("weaponName") && weapons[game.selectedWeapon]) el("weaponName").textContent = weapons[game.selectedWeapon].name.toUpperCase();
+  if (el("zombieCount")) el("zombieCount").textContent = game.zombies.length;
 
   const ammo = game.selectedWeapon === "pistol" ? "∞" : "UNLIMITED";
-  document.getElementById("ammoText").textContent = ammo;
+  if (el("ammoText")) el("ammoText").textContent = ammo;
 
-  const slots = document.getElementById("slots");
-  slots.innerHTML = "";
-  for (let i = 0; i < 3; i++) {
-    const slot = document.createElement("div");
-    slot.className = "slot";
-
-if (game.inventory[i]) {
-  slot.innerHTML =
-    `<div class="icon">${game.inventory[i].icon}</div>` +
-    `<div>${game.inventory[i].name}</div>` +
-    `<div>×${game.inventory[i].amount}</div>` +
-    `<div>$${game.inventory[i].value * game.inventory[i].amount}</div>`;
-} else {
-      slot.classList.add("empty");
-      slot.innerHTML = `<div class="icon">·</div><div>EMPTY</div>`;
+  const slots = el("slots");
+  if (slots) {
+    slots.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const slot = document.createElement("div"); slot.className = "slot";
+      if (game.inventory[i]) {
+        slot.innerHTML = `<div class="icon">${game.inventory[i].icon}</div><div>${game.inventory[i].name}</div><div>×${game.inventory[i].amount}</div><div>$${(game.inventory[i].value||0) * game.inventory[i].amount}</div>`;
+      } else {
+        slot.classList.add("empty"); slot.innerHTML = `<div class="icon">·</div><div>EMPTY</div>`;
+      }
+      slots.appendChild(slot);
     }
-    slots.appendChild(slot);
   }
 
-  const sell = document.getElementById("sellPanel");
-  const buy = document.getElementById("buyPanel");
-
-  sell.classList.toggle("show", isInsideZone(game.player, sellZone, 25));
-  buy.classList.toggle("show", isInsideZone(game.player, shopZone, 25));
+  const sell = el("sellPanel"); if (sell) sell.classList.toggle("show", isInsideZone(game.player, sellZone, 25));
+  const buy = el("buyPanel"); if (buy) buy.classList.toggle("show", isInsideZone(game.player, shopZone, 25));
 
   let msg = "";
-  if (isInsideZone(game.player, sellZone, 25)) {
-    msg = "SELL AREA — PRESS E";
-  } else if (isInsideZone(game.player, shopZone, 25)) {
-    msg = "BUY AREA — PRESS E";
-  } else if (game.inventory.length >= 3) {
-    msg = "INVENTORY FULL — RETURN TO THE HUT";
-  } else {
-    msg = "LEFT CLICK TO SHOOT • WASD TO MOVE";
-  }
-  document.getElementById("message").textContent = msg;
+  if (isInsideZone(game.player, sellZone, 25)) msg = "SELL AREA — PRESS E";
+  else if (isInsideZone(game.player, shopZone, 25)) msg = "BUY AREA — PRESS E";
+  else if (game.inventory.length >= 3) msg = "INVENTORY FULL — RETURN TO THE HUT";
+  else msg = "LEFT CLICK TO SHOOT • WASD TO MOVE";
+  if (el("message")) el("message").textContent = msg;
 }
 
 function showToast(text) {
-  const el = document.getElementById("toast");
-  el.textContent = text;
-  el.style.display = "block";
+  const t = el("toast");
+  if (!t) return;
+  t.textContent = text;
+  t.style.display = "block";
   game.toastTimer = 1.5;
 }
 
@@ -1010,7 +753,7 @@ function loop(now) {
   if (game.toastTimer > 0) {
     game.toastTimer -= dt;
     if (game.toastTimer <= 0) {
-      document.getElementById("toast").style.display = "none";
+      const t = el("toast"); if (t) t.style.display = "none";
     }
   }
 
