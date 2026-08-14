@@ -264,8 +264,10 @@ function sellInventory() {
   }
 
   let earned = 0;
-  for (const item of game.inventory) earned += item.value;
-  const count = game.inventory.length;
+for (const item of game.inventory) {
+  earned += item.value * item.amount;
+}
+  const count = game.inventory.reduce((total, item) => total + item.amount, 0);
   game.money += earned;
   game.inventory = [];
 
@@ -318,16 +320,45 @@ function randomLoot() {
   return lootTypes[0];
 }
 
+// === STACKABLE INVENTORY ===
+const MAX_SLOTS = 3;
+const MAX_STACK = 10;
+
 function addLoot(loot) {
-  if (game.inventory.length >= 3) {
-    showToast("INVENTORY FULL — RETURN TO THE HUT");
-    return false;
+  // Find an existing stack of the same item that isn't full
+  const existing = game.inventory.find(
+    item => item.type === loot.type && item.amount < MAX_STACK
+  );
+
+  if (existing) {
+    existing.amount++;
+
+    showToast(
+      `${loot.name} ×${existing.amount}`
+    );
+
+    updateUI();
+    return true;
   }
 
-  game.inventory.push(loot);
-  showToast(`${loot.name} COLLECTED ${loot.value ? `+$${loot.value} VALUE` : "(WORTH $0)"}`);
-  updateUI();
-  return true;
+  // No existing stack has room, so create a new slot
+  if (game.inventory.length < MAX_SLOTS) {
+    game.inventory.push({
+      ...loot,
+      amount: 1
+    });
+
+    showToast(
+      `${loot.name} COLLECTED`
+    );
+
+    updateUI();
+    return true;
+  }
+
+  // All 3 slots are occupied
+  showToast("INVENTORY FULL — RETURN TO THE HUT");
+  return false;
 }
 
 function shoot() {
@@ -931,12 +962,13 @@ function updateUI() {
     const slot = document.createElement("div");
     slot.className = "slot";
 
-    if (game.inventory[i]) {
-      slot.innerHTML =
-        `<div class="icon">${game.inventory[i].icon}</div>` +
-        `<div>${game.inventory[i].name}</div>` +
-        `<div>$${game.inventory[i].value}</div>`;
-    } else {
+if (game.inventory[i]) {
+  slot.innerHTML =
+    `<div class="icon">${game.inventory[i].icon}</div>` +
+    `<div>${game.inventory[i].name}</div>` +
+    `<div>×${game.inventory[i].amount}</div>` +
+    `<div>$${game.inventory[i].value * game.inventory[i].amount}</div>`;
+} else {
       slot.classList.add("empty");
       slot.innerHTML = `<div class="icon">·</div><div>EMPTY</div>`;
     }
