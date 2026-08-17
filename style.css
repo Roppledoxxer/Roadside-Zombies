@@ -7,6 +7,9 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
   background: #090909;
   font-family: "Courier New", monospace;
   color: #fff;
