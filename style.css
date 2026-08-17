@@ -7,7 +7,6 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  overflow: hidden;
   touch-action: none;
   overscroll-behavior: none;
   background: #090909;
@@ -312,8 +311,60 @@ button:hover {
   }
 }
 
+.shopCard {
+  width: min(680px, 90%);
+  max-height: 88%;
+  overflow-y: auto;
+  padding: 24px;
+  border: 4px solid #aaa;
+  background: #101010;
+  box-shadow: 10px 10px 0 #000;
+}
 
-.shopCard{width:min(680px,90%);max-height:88%;overflow-y:auto;padding:24px;border:4px solid #aaa;background:#101010;box-shadow:10px 10px 0 #000}.shopHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #333;padding-bottom:13px;margin-bottom:12px}.shopHeader h1{margin:5px 0 0;font-size:28px}.shopCash{border:2px solid #555;padding:10px 13px;font-size:12px;color:#aaa;white-space:nowrap}.shopCash span{color:#f5c84b;font-size:18px;font-weight:800;margin-left:5px}#shopItems{display:grid;grid-template-columns:1fr 1fr;gap:9px}.shopItem{width:100%;min-height:82px;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:9px;text-align:left;padding:10px;background:#1b1b1b;color:white;border:2px solid #444;box-shadow:4px 4px 0 #050505}.shopItem:hover:not(:disabled){background:#292929;border-color:#ddd;transform:translate(2px,2px)}.shopItem:disabled{cursor:not-allowed;opacity:.43;box-shadow:2px 2px 0 #050505}.shopIcon{font-size:26px;text-align:center}.shopInfo{display:flex;flex-direction:column;gap:5px}.shopInfo strong{font-size:12px}.shopInfo small{font-size:9px;color:#aaa}.shopPrice{color:#f5c84b;font-size:14px;font-weight:800}.closeShop{margin-top:14px;width:100%;background:#ccc}@media(max-width:650px){#shopItems{grid-template-columns:1fr}.shopHeader h1{font-size:21px}.shopCard{padding:15px}}
+.shopHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #555;
+}
+
+.shopHeader h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #e4b63f;
+  letter-spacing: 2px;
+}
+
+.shopContent {
+  max-height: calc(100% - 60px);
+  overflow-y: auto;
+}
+
+.shopItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+}
+
+.shopItem:last-child {
+  border-bottom: none;
+}
+
+.shopItem .itemName {
+  color: #ddd;
+  flex: 1;
+}
+
+.shopItem .itemPrice {
+  color: #f5c84b;
+  font-weight: 700;
+  margin-left: 12px;
+}
 
 .modeTitle {
   margin-top: 18px;
