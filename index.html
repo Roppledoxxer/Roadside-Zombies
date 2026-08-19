@@ -16,15 +16,18 @@
         <div class="hudTitle">HEALTH</div>
         <div id="hearts"></div>
       </div>
+
       <div class="hudBox">
         <div class="hudTitle">MONEY</div>
         <div id="money">$0</div>
       </div>
+
       <div class="hudBox weaponBox">
         <div class="hudTitle">WEAPON</div>
         <div id="weaponName">PISTOL</div>
         <div id="ammoText">∞</div>
       </div>
+
       <div class="hudBox">
         <div class="hudTitle">ZOMBIES</div>
         <div id="zombieCount">0</div>
@@ -40,15 +43,34 @@
       <div id="sellPanel" class="safePanel">
         <h2>SELL AREA</h2>
         <p>Stand here and press <b>E</b> to sell everything in your inventory.</p>
-        <div class="panelHint">BOOT = $1 &nbsp; • &nbsp; FLESH = $0 &nbsp; • &nbsp; GOLD = $10</div>
+        <div class="panelHint">
+          BOOT = $1 &nbsp; • &nbsp; FLESH = $0 &nbsp; • &nbsp; GOLD = $10
+        </div>
       </div>
+
       <div id="buyPanel" class="safePanel">
         <h2>BUY AREA</h2>
         <p>Press <b>E</b> near a machine to buy the selected item.</p>
-        <div class="shopLine"><span>♥ More Health (+1)</span><b>$20</b></div>
-        <div class="shopLine"><span>🔫 Shotgun</span><b>$30</b></div>
-        <div class="shopLine"><span>▰ Rifle</span><b>$50</b></div>
-        <div class="shopLine"><span>⚡ Minigun</span><b>$150</b></div>
+
+        <div class="shopLine">
+          <span>♥ More Health (+1)</span>
+          <b>$20</b>
+        </div>
+
+        <div class="shopLine">
+          <span>🔫 Shotgun</span>
+          <b>$30</b>
+        </div>
+
+        <div class="shopLine">
+          <span>▰ Rifle</span>
+          <b>$50</b>
+        </div>
+
+        <div class="shopLine">
+          <span>⚡ Minigun</span>
+          <b>$150</b>
+        </div>
       </div>
     </div>
 
@@ -61,6 +83,7 @@
         <button class="touchBtn dpad down" data-key="s">▼</button>
         <button class="touchBtn dpad right" data-key="d">▶</button>
       </div>
+
       <div class="mobileActions">
         <button id="mobileShoot" class="touchBtn action shootBtn">SHOOT</button>
         <button id="mobileUse" class="touchBtn action useBtn">USE</button>
@@ -70,48 +93,78 @@
     <div id="startScreen" class="overlay">
       <div class="titleCard">
         <div class="pixelSmall">ROAD 13</div>
+
         <h1>ROADSIDE<br>ZOMBIE SURVIVAL</h1>
-        <p>Survive the road. Loot the dead. Get rich. Don't get eaten.</p>
+
+        <p>
+          Survive the road. Loot the dead. Get rich. Don't get eaten.
+        </p>
+
         <div class="modeTitle">CHOOSE YOUR DEVICE</div>
+
         <div class="modeButtons">
           <button id="pcModeBtn" class="modeBtn active">PC</button>
           <button id="mobileModeBtn" class="modeBtn">MOBILE</button>
         </div>
+
         <div id="pcControls" class="controls">
           <span><b>WASD</b> MOVE</span>
           <span><b>MOUSE</b> AIM / SHOOT</span>
           <span><b>E</b> INTERACT</span>
           <span><b>1-4</b> SELECT GUN</span>
         </div>
+
         <div id="mobileControlsInfo" class="controls hiddenControlInfo">
           <span><b>ARROWS</b> MOVE</span>
           <span><b>SHOOT</b> ATTACK</span>
           <span><b>USE</b> SHOPS / SELL</span>
           <span><b>GUN</b> CHANGE WEAPON</span>
         </div>
+
         <button id="startBtn">START SURVIVAL</button>
       </div>
     </div>
 
     <div id="shopMenu" class="overlay hidden">
       <div class="shopCard">
-        <div class="shopHeader"><div><div class="pixelSmall">SAFE HUT • SHOP</div><h1>BUY SUPPLIES</h1></div><div class="shopCash">CASH <span id="shopMoney">$0</span></div></div>
+        <div class="shopHeader">
+          <div>
+            <div class="pixelSmall">SAFE HUT • SHOP</div>
+            <h1>BUY SUPPLIES</h1>
+          </div>
+
+          <div class="shopCash">
+            CASH <span id="shopMoney">$0</span>
+          </div>
+        </div>
+
         <div id="shopItems"></div>
-        <button id="closeShopBtn" class="closeShop">CLOSE [ESC]</button>
+
+        <button id="closeShopBtn" class="closeShop">
+          CLOSE [ESC]
+        </button>
       </div>
     </div>
 
     <div id="deathScreen" class="overlay hidden">
       <div class="titleCard deathCard">
         <div class="pixelSmall">GAME OVER</div>
+
         <h1>YOU DIED</h1>
+
         <p id="deathStats"></p>
+
         <button id="restartBtn">RESTART</button>
       </div>
     </div>
 
     <div id="toast"></div>
   </div>
+
+  <!-- Background music -->
+  <audio id="bgMusic" loop preload="auto">
+    <source src="music.mp3" type="audio/mpeg">
+  </audio>
 
   <script src="script.js"></script>
 </body>
