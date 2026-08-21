@@ -189,6 +189,9 @@ let game = {
   bullets: [],
   drops: [],
   particles: [],
+  boss: null,
+  bossProjectiles: [],
+  screenShake: 0,
 
   spawnTimer: 0,
   spawnRate: 1.35,
@@ -235,6 +238,9 @@ function resetGame() {
   game.bullets = [];
   game.drops = [];
   game.particles = [];
+  game.boss = null;
+  game.bossProjectiles = [];
+  game.screenShake = 0;
 
   game.spawnTimer = 0;
   game.spawnRate = 1.35;
@@ -1134,6 +1140,389 @@ function spawnZombie() {
 }
 
 /* =========================
+   THE DECAYER BOSS
+========================= */
+
+function spawnBoss() {
+  if (game.boss) return;
+
+  const hp = Math.max(20, (2 + Math.floor(game.elapsed / 35)) * 50);
+  const x = ROAD.x + ROAD.w / 2 + (Math.random() - 0.5) * 90;
+  const y = Math.max(MIN_WORLD_Y + 60, game.player.y - 680);
+
+  game.boss = {
+    name: "The Decayer",
+    x,
+    y,
+    hp,
+    maxHp: hp,
+    speed: 31,
+    radius: 34,
+    hitFlash: 0,
+    attackCooldown: 0,
+    attackTimer: 2.2,
+    attack: null,
+    wobble: 0,
+    phase: Math.random() * Math.PI * 2,
+    summonDone: false
+  };
+
+  showToast("THE DECAYER IS COMING...");
+
+  for (let i = 0; i < 35; i++) {
+    addParticle(
+      game.boss.x + (Math.random() - 0.5) * 60,
+      game.boss.y + (Math.random() - 0.5) * 90,
+      Math.random() < 0.5 ? "#8d9191" : "#626666",
+      0.8 + Math.random() * 0.8,
+      20 + Math.random() * 35
+    );
+  }
+}
+
+function bossSummon() {
+  if (!game.boss) return;
+
+  for (let i = 0; i < 5; i++) {
+    spawnZombie();
+    const z = game.zombies[game.zombies.length - 1];
+    if (z) {
+      z.x = game.boss.x + (Math.random() - 0.5) * 150;
+      z.y = game.boss.y + 45 + Math.random() * 90;
+    }
+  }
+
+  for (let i = 0; i < 18; i++) {
+    addParticle(
+      game.boss.x,
+      game.boss.y + 25,
+      "#757979",
+      0.5,
+      45
+    );
+  }
+
+  showToast("THE DECAYER SUMMONED 5 ZOMBIES!");
+}
+
+function startBossAttack() {
+  if (!game.boss || game.boss.attack) return;
+
+  const roll = Math.floor(Math.random() * 3);
+
+  if (roll === 0) {
+    game.boss.attack = { type: "summon", timer: 1.0 };
+  } else if (roll === 1) {
+    game.boss.attack = { type: "stomp", timer: 1.25, radius: 105 };
+    game.screenShake = Math.max(game.screenShake, 8);
+  } else {
+    game.boss.attack = { type: "projectiles", timer: 0.7 };
+  }
+}
+
+function bossExplodeProjectile(p) {
+  p.exploded = true;
+
+  for (let i = 0; i < 18; i++) {
+    addParticle(
+      p.x,
+      p.y,
+      i % 2 ? "#8c9090" : "#c3c6c6",
+      0.45 + Math.random() * 0.35,
+      35 + Math.random() * 55
+    );
+  }
+
+  game.screenShake = Math.max(game.screenShake, 12);
+
+  if (Math.hypot(game.player.x - p.x, game.player.y - p.y) <= p.radius) {
+    hurtPlayer(1);
+  }
+}
+
+function updateBoss(dt) {
+  const b = game.boss;
+  if (!b) return;
+
+  b.hitFlash = Math.max(0, b.hitFlash - dt);
+  b.attackCooldown = Math.max(0, b.attackCooldown - dt);
+  b.wobble += dt * 5;
+
+  const vx = game.player.x - b.x;
+  const vy = game.player.y - b.y;
+  const dist = Math.hypot(vx, vy) || 1;
+
+  // The Decayer stays outside the hut just like the normal zombies.
+  if (!inHut()) {
+    b.x += (vx / dist) * b.speed * dt;
+    b.y += (vy / dist) * b.speed * dt;
+  } else {
+    const push = b.x < hut.x + hut.w / 2 ? -1 : 1;
+    b.x += push * b.speed * dt;
+    b.y += ((hut.y - 45) - b.y) * dt * 2;
+  }
+
+  // Clamp the boss to the playable area and keep it on the road-ish zone.
+  b.x = Math.max(28, Math.min(W - 28, b.x));
+  b.y = Math.max(MIN_WORLD_Y, Math.min(MAX_WORLD_Y, b.y));
+
+  // Constant decaying particles.
+  if (Math.random() < 0.72) {
+    addParticle(
+      b.x + (Math.random() - 0.5) * 55,
+      b.y - 5 + (Math.random() - 0.5) * 70,
+      Math.random() < 0.5 ? "#8e9292" : "#5f6363",
+      0.35 + Math.random() * 0.55,
+      10 + Math.random() * 25
+    );
+  }
+
+  if (!inHut() && dist < b.radius + 18 && b.attackCooldown <= 0) {
+    hurtPlayer(1);
+    b.attackCooldown = 0.95;
+  }
+
+  if (!b.attack) {
+    b.attackTimer -= dt;
+
+    if (b.attackTimer <= 0) {
+      startBossAttack();
+    }
+  } else {
+    // Keep a local reference so an attack can safely finish and
+    // set b.attack = null without the rest of this block touching null.
+    const attack = b.attack;
+    attack.timer -= dt;
+
+    if (attack.type === "summon") {
+      if (attack.timer <= 0) {
+        bossSummon();
+        b.attack = null;
+        b.attackTimer = 2.4 + Math.random() * 1.7;
+      }
+    } else if (attack.type === "stomp") {
+      game.screenShake = Math.max(game.screenShake, 10);
+
+      if (attack.timer <= 0) {
+        const radius = attack.radius;
+
+        for (let i = 0; i < 26; i++) {
+          addParticle(
+            b.x + (Math.random() - 0.5) * radius * 1.7,
+            b.y + (Math.random() - 0.5) * radius * 1.7,
+            i % 2 ? "#9b9e9e" : "#646868",
+            0.35 + Math.random() * 0.4,
+            35 + Math.random() * 65
+          );
+        }
+
+        game.screenShake = Math.max(game.screenShake, 22);
+
+        if (Math.hypot(game.player.x - b.x, game.player.y - b.y) <= radius) {
+          hurtPlayer(1);
+        }
+
+        b.attack = null;
+        b.attackTimer = 2.8 + Math.random() * 1.8;
+      }
+    } else if (attack.type === "projectiles") {
+      if (attack.timer <= 0) {
+        const base = Math.atan2(
+          game.player.y - b.y,
+          game.player.x - b.x
+        );
+
+        for (let i = 0; i < 5; i++) {
+          const angle = base + (i - 2) * 0.22;
+          const speed = 150 + Math.random() * 35;
+
+          game.bossProjectiles.push({
+            x: b.x,
+            y: b.y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1.15 + Math.random() * 0.45,
+            radius: 52,
+            exploded: false,
+            spin: Math.random() * Math.PI * 2
+          });
+        }
+
+        showToast("THE DECAYER LAUNCHED 5 EXPLOSIVE PROJECTILES!");
+        b.attack = null;
+        b.attackTimer = 2.5 + Math.random() * 1.5;
+      }
+    }
+  }
+
+  // Update the explosive projectiles.
+  for (let i = game.bossProjectiles.length - 1; i >= 0; i--) {
+    const p = game.bossProjectiles[i];
+
+    if (p.exploded) {
+      game.bossProjectiles.splice(i, 1);
+      continue;
+    }
+
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    p.spin += dt * 8;
+
+    if (p.life <= 0) {
+      bossExplodeProjectile(p);
+      game.bossProjectiles.splice(i, 1);
+    }
+  }
+}
+
+function killBoss() {
+  const b = game.boss;
+  if (!b) return;
+
+  game.kills++;
+
+  // Boss pays better: three loot drops.
+  for (let i = 0; i < 3; i++) {
+    const loot = randomLoot();
+    game.drops.push({
+      x: b.x + (Math.random() - 0.5) * 42,
+      y: b.y + (Math.random() - 0.5) * 42,
+      item: loot,
+      bob: Math.random() * 6.28,
+      pulse: 0
+    });
+  }
+
+  for (let i = 0; i < 60; i++) {
+    addParticle(
+      b.x + (Math.random() - 0.5) * 70,
+      b.y + (Math.random() - 0.5) * 90,
+      i % 3 === 0 ? "#c4c7c7" : "#747878",
+      0.7 + Math.random() * 0.8,
+      45 + Math.random() * 80
+    );
+  }
+
+  game.screenShake = 26;
+  game.boss = null;
+  game.bossProjectiles = [];
+  showToast("THE DECAYER HAS FALLEN!");
+}
+
+function drawBossProjectiles() {
+  for (const p of game.bossProjectiles) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.spin);
+
+    ctx.fillStyle = "rgba(190,195,195,.24)";
+    ctx.fillRect(-10, -10, 20, 20);
+
+    ctx.fillStyle = "#aeb2b2";
+    ctx.fillRect(-5, -5, 10, 10);
+
+    ctx.fillStyle = "#505454";
+    ctx.fillRect(-2, -9, 4, 18);
+    ctx.fillRect(-9, -2, 18, 4);
+
+    ctx.restore();
+  }
+}
+
+function drawBoss() {
+  const b = game.boss;
+  if (!b) return;
+
+  // Stomp warning ring.
+  if (b.attack && b.attack.type === "stomp") {
+    const pulse = 1 + Math.sin(performance.now() / 90) * 0.045;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,70,70,.95)";
+    ctx.fillStyle = "rgba(255,45,45,.10)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.attack.radius * pulse, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(b.x, b.y);
+
+  const wobble = Math.sin(b.wobble) * 2;
+
+  ctx.fillStyle = "rgba(0,0,0,.42)";
+  ctx.fillRect(-30, 26, 60, 10);
+
+  // Legs.
+  ctx.fillStyle = b.hitFlash > 0 ? "#d0d0d0" : "#454949";
+  ctx.fillRect(-21, 18 + wobble, 15, 28);
+  ctx.fillRect(6, 18 - wobble, 15, 28);
+
+  // Huge decaying torso.
+  ctx.fillStyle = b.hitFlash > 0 ? "#ededed" : "#707575";
+  ctx.fillRect(-31, -17, 62, 42);
+
+  // Rotting holes / patches.
+  ctx.fillStyle = "#3c4141";
+  ctx.fillRect(-26, -9, 12, 10);
+  ctx.fillRect(13, -2, 11, 15);
+  ctx.fillRect(-8, 8, 13, 10);
+  ctx.fillRect(-28, 15, 7, 7);
+
+  // Head.
+  ctx.fillStyle = b.hitFlash > 0 ? "#f0f0f0" : "#898e8e";
+  ctx.fillRect(-25, -56, 50, 40);
+
+  ctx.fillStyle = "#555a5a";
+  ctx.fillRect(-27, -52, 8, 22);
+  ctx.fillRect(19, -44, 9, 20);
+  ctx.fillRect(-9, -18, 13, 6);
+  ctx.fillRect(11, -31, 7, 5);
+
+  // Face.
+  ctx.fillStyle = "#242828";
+  ctx.fillRect(-15, -42, 10, 8);
+  ctx.fillRect(7, -42, 10, 8);
+  ctx.fillRect(-5, -27, 15, 5);
+
+  ctx.fillStyle = "#d84a4a";
+  ctx.fillRect(-12, -40, 4, 4);
+  ctx.fillRect(10, -40, 4, 4);
+
+  // Massive arms.
+  ctx.strokeStyle = b.hitFlash > 0 ? "#d7d7d7" : "#606565";
+  ctx.lineWidth = 10;
+  ctx.beginPath();
+  ctx.moveTo(-30, -8);
+  ctx.lineTo(-50, 23 + wobble);
+  ctx.moveTo(30, -8);
+  ctx.lineTo(50, 23 - wobble);
+  ctx.stroke();
+
+  // Boss title.
+  ctx.textAlign = "center";
+  ctx.font = "bold 13px Courier New";
+  ctx.fillStyle = "#d7d7d7";
+  ctx.fillText("THE DECAYER", 0, -70);
+
+  // Boss HP bar.
+  const bw = 82;
+  ctx.fillStyle = "#161616";
+  ctx.fillRect(-bw / 2, -82, bw, 8);
+  ctx.fillStyle = "#aaa";
+  ctx.fillRect(-bw / 2, -82, bw * Math.max(0, b.hp / b.maxHp), 8);
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(-bw / 2, -82, bw, 8);
+
+  ctx.restore();
+}
+
+
+/* =========================
    DAMAGE / DEATH
 ========================= */
 
@@ -1384,6 +1773,10 @@ function update(dt) {
         if (z.hp <= 0) {
           game.kills++;
 
+          if (game.kills % 30 === 0 && !game.boss) {
+            spawnBoss();
+          }
+
           const loot =
             randomLoot();
 
@@ -1423,6 +1816,31 @@ function update(dt) {
 
     if (hit) {
       game.bullets.splice(i, 1);
+    }
+  }
+
+  /* =========================
+     BOSS
+  ========================= */
+
+  if (game.boss) {
+    // Check each still-existing bullet against The Decayer.
+    for (let bi = game.bullets.length - 1; bi >= 0; bi--) {
+      const b = game.bullets[bi];
+      const boss = game.boss;
+
+      if (Math.hypot(b.x - boss.x, b.y - boss.y) < boss.radius + 5) {
+        boss.hp -= b.damage;
+        boss.hitFlash = 0.12;
+
+        addParticle(b.x, b.y, "#fff", 0.2, 7);
+        game.bullets.splice(bi, 1);
+
+        if (boss.hp <= 0) {
+          killBoss();
+          break;
+        }
+      }
     }
   }
 
@@ -1572,6 +1990,14 @@ function update(dt) {
   }
 
   /* =========================
+     BOSS UPDATE
+  ========================= */
+
+  if (game.boss) {
+    updateBoss(dt);
+  }
+
+  /* =========================
      LOOT PICKUP
   ========================= */
 
@@ -1697,12 +2123,23 @@ function draw() {
     H
   );
 
+  if (game.screenShake > 0) {
+    const shake = game.screenShake;
+    ctx.save();
+    ctx.translate(
+      (Math.random() - 0.5) * shake,
+      (Math.random() - 0.5) * shake
+    );
+  }
+
   drawWorld();
   drawRoadside();
   drawHut();
   drawDrops();
   drawZombies();
+  drawBoss();
   drawBullets();
+  drawBossProjectiles();
   drawPlayer();
   drawParticles();
   drawCrosshair();
@@ -1748,6 +2185,11 @@ function draw() {
       W,
       H
     );
+  }
+
+  if (game.screenShake > 0) {
+    ctx.restore();
+    game.screenShake = Math.max(0, game.screenShake - 1.6);
   }
 }
 
@@ -2732,7 +3174,8 @@ function updateUI() {
   document.getElementById(
     "zombieCount"
   ).textContent =
-    game.zombies.length;
+    game.zombies.length +
+    (game.boss ? 1 : 0);
 
   const ammo =
     game.selectedWeapon ===
@@ -2854,6 +3297,9 @@ function updateUI() {
   ) {
     msg =
       "ARROWS TO MOVE • SHOOT TO ATTACK";
+  } else if (game.boss) {
+    msg =
+      `THE DECAYER — ${Math.max(0, Math.ceil(game.boss.hp))}/${game.boss.maxHp} HP`;
   } else {
     msg =
       "LEFT CLICK TO SHOOT • WASD TO MOVE";
