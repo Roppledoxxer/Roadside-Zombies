@@ -10,6 +10,33 @@ const mouse = { x: W / 2, y: H / 2, down: false };
 let controlMode = "pc";
 
 /* =========================
+   MOBILE BROWSER GESTURE LOCK
+   Blocks pinch zoom without swallowing normal one-finger button input.
+========================= */
+const preventBrowserGesture = event => event.preventDefault();
+
+for (const gestureName of ["gesturestart", "gesturechange", "gestureend"]) {
+  document.addEventListener(gestureName, preventBrowserGesture, { passive: false });
+}
+
+// Stop multi-finger pinch gestures. Single-finger taps and pointer controls
+// continue to work normally. CSS also locks the page itself in place.
+document.addEventListener("touchstart", event => {
+  if (event.touches.length > 1) event.preventDefault();
+}, { passive: false });
+
+document.addEventListener("touchmove", event => {
+  if (event.touches.length > 1) event.preventDefault();
+}, { passive: false });
+
+// Prevent double-click zoom on browsers that emit a dblclick event for touch.
+document.addEventListener("dblclick", event => {
+  if (event.target instanceof Element && event.target.closest("#gameWrap, button")) {
+    event.preventDefault();
+  }
+}, { passive: false });
+
+/* =========================
    BACKGROUND MUSIC
 ========================= */
 
