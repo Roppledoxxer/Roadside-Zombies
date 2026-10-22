@@ -1,34 +1,48 @@
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   width: 100%;
   height: 100%;
+  min-height: 100%;
   overflow: hidden;
-  touch-action: none;
   overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
   background: #090909;
   font-family: "Courier New", monospace;
   color: #fff;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #gameWrap {
   position: relative;
-  width: min(100vw, 1152px);
+  width: min(100%, 1152px, calc(100dvh * 16 / 9));
   aspect-ratio: 16 / 9;
-  max-height: 100vh;
+  max-height: 100%;
+  flex: 0 0 auto;
   overflow: hidden;
+  isolation: isolate;
   border: 4px solid #222;
   box-shadow: 0 0 0 4px #000, 0 16px 60px rgba(0,0,0,.7);
   background: #111;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 canvas {
@@ -38,6 +52,9 @@ canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   cursor: crosshair;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #hud {
@@ -57,34 +74,11 @@ canvas {
   box-shadow: 4px 4px 0 #111;
 }
 
-.weaponBox {
-  min-width: 132px;
-}
-
-.hudTitle,
-.invTitle {
-  font-size: 10px;
-  color: #aaa;
-  letter-spacing: 1px;
-}
-
-#hearts {
-  margin-top: 4px;
-  font-size: 18px;
-  letter-spacing: 1px;
-}
-
-#money, #weaponName, #ammoText, #zombieCount {
-  margin-top: 3px;
-  color: #fff;
-  font-weight: 700;
-  font-size: 16px;
-}
-
-#ammoText {
-  color: #f5c84b;
-  font-size: 11px;
-}
+.weaponBox { min-width: 132px; }
+.hudTitle, .invTitle { font-size: 10px; color: #aaa; letter-spacing: 1px; }
+#hearts { margin-top: 4px; font-size: 18px; letter-spacing: 1px; }
+#money, #weaponName, #ammoText, #zombieCount { margin-top: 3px; color: #fff; font-weight: 700; font-size: 16px; }
+#ammoText { color: #f5c84b; font-size: 11px; }
 
 #inventory {
   position: absolute;
@@ -97,33 +91,10 @@ canvas {
   box-shadow: 4px 4px 0 #111;
 }
 
-#slots {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-top: 7px;
-}
-
-.slot {
-  height: 58px;
-  border: 2px solid #4a4a4a;
-  background: #171717;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  font-size: 10px;
-  text-align: center;
-}
-
-.slot .icon {
-  font-size: 21px;
-  line-height: 20px;
-}
-
-.slot.empty {
-  color: #555;
-}
+#slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 7px; }
+.slot { height: 58px; border: 2px solid #4a4a4a; background: #171717; display: flex; align-items: center; justify-content: center; flex-direction: column; font-size: 10px; text-align: center; }
+.slot .icon { font-size: 21px; line-height: 20px; }
+.slot.empty { color: #555; }
 
 #interactPanel {
   position: absolute;
@@ -137,45 +108,12 @@ canvas {
   pointer-events: none;
 }
 
-.safePanel {
-  display: none;
-  background: rgba(7,7,7,.9);
-  border: 2px solid #8d8d8d;
-  padding: 11px 14px;
-  width: 50%;
-  box-shadow: 5px 5px 0 #111;
-}
-
-.safePanel.show {
-  display: block;
-}
-
-.safePanel h2 {
-  margin: 0 0 5px;
-  font-size: 15px;
-  color: #f5c84b;
-}
-
-.safePanel p {
-  margin: 0 0 7px;
-  font-size: 11px;
-  line-height: 1.35;
-  color: #ddd;
-}
-
-.panelHint {
-  font-size: 10px;
-  color: #aaa;
-}
-
-.shopLine {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  border-top: 1px solid #333;
-  padding-top: 4px;
-  margin-top: 4px;
-}
+.safePanel { display: none; background: rgba(7,7,7,.9); border: 2px solid #8d8d8d; padding: 11px 14px; width: 50%; box-shadow: 5px 5px 0 #111; }
+.safePanel.show { display: block; }
+.safePanel h2 { margin: 0 0 5px; font-size: 15px; color: #f5c84b; }
+.safePanel p { margin: 0 0 7px; font-size: 11px; line-height: 1.35; color: #ddd; }
+.panelHint { font-size: 10px; color: #aaa; }
+.shopLine { display: flex; justify-content: space-between; font-size: 11px; border-top: 1px solid #333; padding-top: 4px; margin-top: 4px; }
 
 #message {
   position: absolute;
@@ -203,71 +141,41 @@ canvas {
   display: none;
   pointer-events: none;
   text-align: center;
+  max-width: 90%;
 }
 
 .overlay {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at center, rgba(80,0,0,.18), rgba(0,0,0,.9)),
-    repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px, transparent 1px, transparent 4px);
+  background: radial-gradient(circle at center, rgba(80,0,0,.18), rgba(0,0,0,.9)), repeating-linear-gradient(0deg, rgba(255,255,255,.02) 0px, rgba(255,255,255,.02) 1px, transparent 1px, transparent 4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 20;
+  overscroll-behavior: contain;
 }
-
-.overlay.hidden {
-  display: none;
-}
+.overlay.hidden { display: none; }
 
 .titleCard {
   width: min(620px, 88%);
+  max-height: 94%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding: 34px;
   border: 4px solid #b6b6b6;
   background: #101010;
   box-shadow: 10px 10px 0 #000;
   text-align: center;
 }
+.titleCard h1 { font-size: clamp(29px, 5vw, 54px); line-height: .88; margin: 10px 0 17px; color: #eee; }
+.titleCard p { color: #b9b9b9; font-size: 14px; line-height: 1.4; }
+.pixelSmall { font-size: 12px; color: #e4b63f; letter-spacing: 4px; }
 
-.titleCard h1 {
-  font-size: clamp(29px, 5vw, 54px);
-  line-height: .88;
-  margin: 10px 0 17px;
-  color: #eee;
-}
-
-.titleCard p {
-  color: #b9b9b9;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.pixelSmall {
-  font-size: 12px;
-  color: #e4b63f;
-  letter-spacing: 4px;
-}
-
-.controls {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  margin: 20px auto;
-  max-width: 430px;
-}
-
-.controls span {
-  background: #1a1a1a;
-  border: 1px solid #383838;
-  padding: 8px;
-  font-size: 11px;
-  color: #aaa;
-}
-
-.controls b {
-  color: #fff;
-}
+.controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 20px auto; max-width: 430px; }
+.controls span { background: #1a1a1a; border: 1px solid #383838; padding: 8px; font-size: 11px; color: #aaa; }
+.controls b { color: #fff; }
 
 button {
   font-family: inherit;
@@ -279,270 +187,146 @@ button {
   border: 0;
   box-shadow: 5px 5px 0 #000;
   cursor: pointer;
-}
-
-button:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 3px 3px 0 #000;
-}
-
-.deathCard h1 {
-  color: #d55;
-}
-
-@media (max-width: 760px) {
-  #hud {
-    transform: scale(.8);
-    transform-origin: top left;
-  }
-
-  #inventory {
-    transform: scale(.8);
-    transform-origin: top right;
-  }
-
-  #interactPanel {
-    width: 96%;
-  }
-
-  .safePanel {
-    width: 50%;
-    padding: 8px;
-  }
-}
-
-
-.shopCard{width:min(680px,90%);max-height:88%;overflow-y:auto;padding:24px;border:4px solid #aaa;background:#101010;box-shadow:10px 10px 0 #000}.shopHeader{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #333;padding-bottom:13px;margin-bottom:12px}.shopHeader h1{margin:5px 0 0;font-size:28px}.shopCash{border:2px solid #555;padding:10px 13px;font-size:12px;color:#aaa;white-space:nowrap}.shopCash span{color:#f5c84b;font-size:18px;font-weight:800;margin-left:5px}#shopItems{display:grid;grid-template-columns:1fr 1fr;gap:9px}.shopItem{width:100%;min-height:82px;display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:9px;text-align:left;padding:10px;background:#1b1b1b;color:white;border:2px solid #444;box-shadow:4px 4px 0 #050505}.shopItem:hover:not(:disabled){background:#292929;border-color:#ddd;transform:translate(2px,2px)}.shopItem:disabled{cursor:not-allowed;opacity:.43;box-shadow:2px 2px 0 #050505}.shopIcon{font-size:26px;text-align:center}.shopInfo{display:flex;flex-direction:column;gap:5px}.shopInfo strong{font-size:12px}.shopInfo small{font-size:9px;color:#aaa}.shopPrice{color:#f5c84b;font-size:14px;font-weight:800}.closeShop{margin-top:14px;width:100%;background:#ccc}@media(max-width:650px){#shopItems{grid-template-columns:1fr}.shopHeader h1{font-size:21px}.shopCard{padding:15px}}
-
-.modeTitle {
-  margin-top: 18px;
-  margin-bottom: 8px;
-  font-size: 11px;
-  color: #aaa;
-  letter-spacing: 2px;
-}
-
-.modeButtons {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.modeBtn {
-  min-width: 130px;
-  padding: 10px 16px;
-  font-size: 13px;
-  background: #1a1a1a;
-  color: #aaa;
-  border: 2px solid #444;
-  box-shadow: 4px 4px 0 #000;
-}
-
-.modeBtn.active {
-  background: #e4b63f;
-  color: #080808;
-  border-color: #fff;
-}
-
-.hiddenControlInfo {
-  display: none !important;
-}
-
-.mobileControls {
-  position: absolute;
-  inset: 0;
-  z-index: 12;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-}
-
-.mobileControls.hidden {
-  display: none;
-}
-
-.mobileDpad,
-.mobileActions {
-  position: absolute;
-  pointer-events: auto;
-}
-
-.mobileDpad {
-  left: 18px;
-  bottom: 18px;
-  width: 156px;
-  height: 156px;
-}
-
-.mobileActions {
-  right: 18px;
-  bottom: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.touchBtn {
-  border: 3px solid #bdbdbd;
-  background: rgba(15,15,15,.9);
-  color: #fff;
-  box-shadow: 5px 5px 0 #000;
-  font-family: inherit;
-  font-weight: 900;
-  touch-action: none;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
+button:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 #000; }
+button:focus-visible { outline: 3px solid #f5c84b; outline-offset: 3px; }
+.deathCard h1 { color: #d55; }
 
-.touchBtn:active,
-.touchBtn.pressed {
-  transform: translate(3px, 3px);
-  box-shadow: 2px 2px 0 #000;
-  background: #333;
+.shopCard {
+  width: min(680px, 90%);
+  max-height: 88%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px;
+  border: 4px solid #aaa;
+  background: #101010;
+  box-shadow: 10px 10px 0 #000;
 }
+.shopHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 2px solid #333; padding-bottom: 13px; margin-bottom: 12px; }
+.shopHeader h1 { margin: 5px 0 0; font-size: 28px; }
+.shopCash { border: 2px solid #555; padding: 10px 13px; font-size: 12px; color: #aaa; white-space: nowrap; }
+.shopCash span { color: #f5c84b; font-size: 18px; font-weight: 800; margin-left: 5px; }
+#shopItems { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.shopItem { width: 100%; min-height: 82px; display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 9px; text-align: left; padding: 10px; background: #1b1b1b; color: white; border: 2px solid #444; box-shadow: 4px 4px 0 #050505; touch-action: pan-y; }
+.shopItem:hover:not(:disabled) { background: #292929; border-color: #ddd; transform: translate(2px,2px); }
+.shopItem:disabled { cursor: not-allowed; opacity: .43; box-shadow: 2px 2px 0 #050505; }
+.shopIcon { font-size: 26px; text-align: center; }
+.shopInfo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.shopInfo strong { font-size: 12px; }
+.shopInfo small { font-size: 9px; color: #aaa; }
+.shopPrice { color: #f5c84b; font-size: 14px; font-weight: 800; }
+.closeShop { margin-top: 14px; width: 100%; background: #ccc; }
 
-.dpad {
-  position: absolute;
-  width: 52px;
-  height: 52px;
-  padding: 0;
-  font-size: 21px;
-}
+.modeTitle { margin-top: 18px; margin-bottom: 8px; font-size: 11px; color: #aaa; letter-spacing: 2px; }
+.modeButtons { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.modeBtn { min-width: 130px; padding: 10px 16px; font-size: 13px; background: #1a1a1a; color: #aaa; border: 2px solid #444; box-shadow: 4px 4px 0 #000; }
+.modeBtn.active { background: #e4b63f; color: #080808; border-color: #fff; }
+.hiddenControlInfo { display: none !important; }
 
+.mobileControls { position: absolute; inset: 0; z-index: 12; pointer-events: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+.mobileControls.hidden { display: none; }
+.mobileDpad, .mobileActions { position: absolute; pointer-events: auto; }
+.mobileDpad { left: 18px; bottom: 18px; width: 156px; height: 156px; }
+.mobileActions { right: 18px; bottom: 22px; display: flex; flex-direction: column; gap: 12px; }
+.touchBtn { border: 3px solid #bdbdbd; background: rgba(15,15,15,.9); color: #fff; box-shadow: 5px 5px 0 #000; font-family: inherit; font-weight: 900; touch-action: none; -webkit-tap-highlight-color: transparent; }
+.touchBtn:active, .touchBtn.pressed { transform: translate(3px,3px); box-shadow: 2px 2px 0 #000; background: #333; }
+.dpad { position: absolute; width: 52px; height: 52px; padding: 0; font-size: 21px; }
 .dpad.up { left: 52px; top: 0; }
 .dpad.left { left: 0; top: 52px; }
 .dpad.down { left: 52px; top: 104px; }
 .dpad.right { left: 104px; top: 52px; }
+.mobileActions .action { width: 104px; height: 58px; padding: 0; font-size: 14px; }
+.shootBtn { border-color: #d96b5f; }
+.useBtn { border-color: #e4b63f; }
 
-.mobileActions .action {
-  width: 104px;
-  height: 58px;
-  padding: 0;
-  font-size: 14px;
+.stackCount { font-size: 11px; font-weight: 900; }
+.loreBox { margin: 15px auto 0; max-width: 500px; padding: 10px 12px; background: rgba(30,12,12,.75); border: 2px solid #4e3b3b; text-align: left; }
+.loreTitle { color: #d7a84e; font-size: 11px; letter-spacing: 2px; margin-bottom: 5px; font-weight: 800; }
+.loreBox p { margin: 0; color: #bdbdbd; font-size: 11px; line-height: 1.45; }
+#gearStatus { margin-top: 7px; padding-top: 6px; border-top: 1px solid #333; color: #aaa; font-size: 8px; line-height: 1.35; text-align: center; }
+
+#rotateNotice { display: none; }
+
+/* Desktop and laptop: keep the centered, original 16:9 game. */
+@media (min-width: 701px) and (orientation: landscape) {
+  #gameWrap { border-width: 4px; }
 }
 
-.shootBtn {
-  border-color: #d96b5f;
+/* Touchscreen in landscape: make HUD and buttons fit the shorter screen. */
+@media (pointer: coarse) and (orientation: landscape) and (max-width: 1100px) {
+  #hud { left: max(8px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); gap: 5px; transform: scale(.72); transform-origin: top left; }
+  #inventory { right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); transform: scale(.72); transform-origin: top right; }
+  #message { top: 66px; font-size: 10px; width: 70%; }
+  #interactPanel { width: calc(100% - 300px); min-width: 230px; max-width: 450px; bottom: 118px; gap: 5px; }
+  .safePanel { padding: 7px; }
+  .safePanel h2 { font-size: 11px; }
+  .safePanel p, .shopLine { font-size: 8px; }
+  .panelHint { font-size: 7px; }
+  .mobileDpad { left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); transform: scale(.82); transform-origin: bottom left; }
+  .mobileActions { right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); transform: scale(.82); transform-origin: bottom right; gap: 8px; }
+  .titleCard { padding: 14px 20px; max-height: 94%; }
+  .titleCard h1 { font-size: clamp(25px, 4vw, 39px); margin: 7px 0 10px; }
+  .titleCard p { font-size: 11px; margin: 7px 0; }
+  .loreBox { margin-top: 8px; padding: 7px 9px; }
+  .loreBox p { font-size: 9px; }
+  .modeTitle { margin-top: 9px; }
+  .controls { margin: 9px auto; gap: 4px; }
+  .controls span { padding: 6px; font-size: 9px; }
+  #startBtn { padding: 10px 16px; font-size: 12px; }
+  .shopCard { max-height: 94%; padding: 14px; }
 }
 
-.useBtn {
-  border-color: #e4b63f;
-}
-
+/* Small screens: tighten spacing without changing PC styling. */
 @media (max-width: 700px) {
-  #gameWrap {
-    width: 100vw;
-    max-height: 100vh;
-    border-width: 2px;
-  }
-
-  #hud {
-    left: 7px;
-    top: 7px;
-    gap: 4px;
-    transform: scale(.78);
-    transform-origin: top left;
-  }
-
-  #inventory {
-    right: 7px;
-    top: 7px;
-    transform: scale(.78);
-    transform-origin: top right;
-  }
-
-  #message {
-    top: 74px;
-    font-size: 10px;
-  }
-
-  #interactPanel {
-    bottom: 185px;
-    width: calc(100% - 20px);
-  }
-
-  .safePanel {
-    width: 100%;
-  }
-
-  .mobileDpad {
-    left: 12px;
-    bottom: 12px;
-    transform: scale(.88);
-    transform-origin: bottom left;
-  }
-
-  .mobileActions {
-    right: 12px;
-    bottom: 16px;
-    transform: scale(.88);
-    transform-origin: bottom right;
-  }
-
-  .titleCard {
-    padding: 22px 16px;
-  }
-
-  .titleCard h1 {
-    font-size: clamp(24px, 8vw, 42px);
-  }
-
-  .controls {
-    grid-template-columns: 1fr 1fr;
-  }
+  #hud { left: 7px; top: 7px; gap: 4px; transform: scale(.68); transform-origin: top left; }
+  #inventory { right: 7px; top: 7px; transform: scale(.68); transform-origin: top right; }
+  #message { top: 62px; font-size: 9px; width: 82%; }
+  #interactPanel { bottom: 170px; width: calc(100% - 18px); gap: 5px; }
+  .safePanel { width: 50%; padding: 7px; }
+  .safePanel h2 { font-size: 11px; }
+  .safePanel p { font-size: 8px; }
+  .panelHint, .shopLine { font-size: 7px; }
+  .mobileDpad { left: max(8px, env(safe-area-inset-left)); bottom: max(8px, env(safe-area-inset-bottom)); transform: scale(.78); transform-origin: bottom left; }
+  .mobileActions { right: max(8px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); transform: scale(.78); transform-origin: bottom right; gap: 8px; }
+  .titleCard { width: 92%; padding: 13px 12px; border-width: 3px; max-height: 94%; }
+  .titleCard h1 { font-size: clamp(24px, 7vw, 37px); margin: 7px 0 10px; }
+  .titleCard p { font-size: 11px; margin: 7px 0; }
+  .controls { grid-template-columns: 1fr 1fr; gap: 4px; margin: 10px auto; }
+  .controls span { padding: 6px 4px; font-size: 9px; }
+  .modeTitle { margin-top: 10px; }
+  .modeBtn { min-width: 110px; padding: 8px 12px; }
+  .loreBox { margin-top: 8px; padding: 7px 9px; }
+  .loreBox p { font-size: 9px; }
+  #shopItems { grid-template-columns: 1fr; }
+  .shopHeader h1 { font-size: 21px; }
+  .shopCard { width: 94%; max-height: 94%; padding: 12px; }
+  .shopHeader { gap: 8px; }
+  .shopCash { padding: 7px; font-size: 10px; }
+  .shopCash span { font-size: 15px; }
+  .shopItem { min-height: 66px; }
+  #gearStatus { font-size: 7px; }
 }
 
-.stackCount {
-  font-size: 11px;
-  font-weight: 900;
-}
-
-/* Lore + survival gear */
-.loreBox {
-  margin: 15px auto 0;
-  max-width: 500px;
-  padding: 10px 12px;
-  background: rgba(30, 12, 12, .75);
-  border: 2px solid #4e3b3b;
-  text-align: left;
-}
-
-.loreTitle {
-  color: #d7a84e;
-  font-size: 11px;
-  letter-spacing: 2px;
-  margin-bottom: 5px;
-  font-weight: 800;
-}
-
-.loreBox p {
-  margin: 0;
-  color: #bdbdbd;
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-#gearStatus {
-  margin-top: 7px;
-  padding-top: 6px;
-  border-top: 1px solid #333;
-  color: #aaa;
-  font-size: 8px;
-  line-height: 1.35;
-  text-align: center;
-}
-
-@media (max-width: 700px) {
-  .loreBox {
-    padding: 8px 10px;
+/* Portrait phones: ask the player to rotate rather than squash the game. */
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 700px) {
+  #rotateNotice {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #090909;
+    text-align: center;
+    touch-action: none;
   }
-
-  .loreBox p {
-    font-size: 10px;
-  }
-
-  #gearStatus {
-    font-size: 7px;
-  }
+  .rotateCard { width: min(420px, 100%); padding: 25px 20px; border: 3px solid #8a8a8a; background: #101010; box-shadow: 8px 8px 0 #000; }
+  .rotateIcon { font-size: 48px; line-height: 1; color: #e4b63f; }
+  .rotateCard h1 { margin: 15px 0 10px; font-size: clamp(22px, 7vw, 32px); color: #eee; }
+  .rotateCard p { margin: 0; color: #bbb; font-size: 13px; line-height: 1.5; }
 }
